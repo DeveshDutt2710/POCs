@@ -1,34 +1,47 @@
-from PyPDF2 import PdfFileWriter, PdfFileReader
 import img2pdf
-from PIL import Image, ImageEnhance
-import sys
+import PyPDF2
+from PIL import Image
 import os
+import sys
+  
+
+pdf_file = sys.argv[1]
+
+merged_file = "merged.pdf"
+
+# storing image path
+img_path = sys.argv[2]
 
 
-input_pdf=sys.argv[1], 
-output='watermarkedPDF.pdf',
-watermark=sys.argv[2]
+img = Image.open(img_path)
+img = img.convert("RGBA")
+datas = img.getdata()
 
-im = Image.open(watermark, "r")
+newData = []
+for item in datas:
+    if item[0] == 255 and item[1] == 255 and item[2] == 255:
+        newData.append((255, 255, 255, 0))
+    else:
+        newData.append(item)
 
-if im.mode != 'RGBA':
-        im = im.convert('RGBA')
-else:
-    im = im.copy()
-alpha = im.split()[3]
-alpha = ImageEnhance.Brightness(alpha).enhance(0.1)
-im.putalpha(alpha)
-
-watermark = im
-watermark.save("input.png")
+img.putdata(newData)
+img.save("img2.png", "PNG")
 
 
-# os.system("convert input.png -background white -alpha remove -alpha off saved_image.png")
 
+
+
+os.system("convert img2.png -background white -alpha remove -alpha off output.png")
+
+  
+# storing pdf path
 pdf_path = "file.pdf"
-watermark = Image.open("input.png")
+  
+# opening image
+image = Image.open("output.png")
+  
 # converting into chunks using img2pdf
-pdf_bytes = img2pdf.convert(watermark.filename)
+pdf_bytes = img2pdf.convert(image.filename)
   
 # opening or creating pdf file
 file = open(pdf_path, "wb")
@@ -41,22 +54,26 @@ image.close()
   
 # closing pdf file
 file.close()
-
-watermark = 'file.pdf'
-
-watermark_obj = PdfFileReader(watermark)
-watermark_page = watermark_obj.getPage(0)
-
-pdf_reader = PdfFileReader(input_pdf)
-pdf_writer = PdfFileWriter()
+watermark = "file.pdf"
 
 
-for page in range(pdf_reader.getNumPages()):
-    page = pdf_reader.getPage(page)
-    page.mergePage(watermark_page)
-    pdf_writer.addPage(page)
+input_file = open(pdf_file,'rb')
+input_pdf = PyPDF2.PdfFileReader(pdf_file)
+watermark_file = open(watermark,'rb')
+watermark_pdf = PyPDF2.PdfFileReader(watermark_file)
 
-with open(output, 'wb') as out:
-    pdf_writer.write(out)
 
-os.remove('file.pdf')
+pdf_page = input_pdf.getPage(0)
+watermark_page = watermark_pdf.getPage(0)
+
+pdf_page.mergePage(watermark_page)
+
+output = PyPDF2.PdfFileWriter()
+output.addPage(pdf_page)
+merged_file = open(merged_file,'wb')
+output.write(merged_file)
+merged_file.close()
+watermark_file.close()
+input_file.close()
+
+os.remove("file.pdf")
